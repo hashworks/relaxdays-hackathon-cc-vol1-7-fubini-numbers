@@ -1,0 +1,10 @@
+[package]
+name = "relaxdays-hackathon-cc-vol1-7-fubini-numbers"
+version = "0.1.0"
+authors = ["Justin Kromlinger <justin.kromlinger@stud.htwk-leipzig.de>"]
+edition = "2018"
+
+[dependencies]
+num-bigint = "0.4"
+num-integer = "0.1"
+num-traits = "0.2"
