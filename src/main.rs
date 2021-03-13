@@ -1,23 +1,49 @@
-use std::{env, process::exit, time::Instant};
+use std::{collections::HashMap, env, process::exit};
 
 use num_bigint::BigUint;
-use num_integer::binomial;
-use num_traits::One;
+use rayon::prelude::*;
 extern crate num_bigint;
 extern crate num_integer;
 
-fn ordered_bell_numbers(n: usize) -> Vec<BigUint> {
-    let mut r: Vec<BigUint> = vec![One::one(); n + 1];
-
-    for j in 2..=n {
-        for k in j..=n {
-            let binominal = binomial(BigUint::from(k), BigUint::from(k - j + 1));
-            let previous = r[j - 1].clone();
-            r[k] += binominal * previous;
+fn get_euler_map(n: usize) -> HashMap<(usize, usize), BigUint> {
+    let mut euler_map = HashMap::new();
+    for n in 1..=n {
+        for m in 0..=(n - 1) / 2 {
+            if m == 0 || n - 1 == m {
+                euler_map.insert((n, m), BigUint::from(1usize));
+            } else {
+                euler_map.insert(
+                    (n, m),
+                    (n - m) * get_euler(&euler_map, n - 1, m - 1)
+                        + (m + 1) * get_euler(&euler_map, n - 1, m),
+                );
+            }
         }
     }
+    euler_map
+}
 
-    r
+fn get_euler(euler_map: &HashMap<(usize, usize), BigUint>, n: usize, m: usize) -> &BigUint {
+    let m = if 2 * m >= n { n - m - 1 } else { m };
+    euler_map.get(&(n, m)).unwrap()
+}
+
+fn ordered_bell_numbers(n: usize) -> Vec<BigUint> {
+    let euler_map = get_euler_map(n - 1);
+
+    (0..n)
+        .into_par_iter()
+        .map(|n| {
+            if n == 0 {
+                BigUint::from(1usize) // Normally this belongs in get_euler but I don't want to wrestle the borrow checker
+            } else {
+                (0..n)
+                    .into_par_iter()
+                    .map(|m| get_euler(&euler_map, n, m) * BigUint::from(2u32).pow(m as u32))
+                    .sum::<BigUint>()
+            }
+        })
+        .collect()
 }
 
 fn main() {
@@ -36,10 +62,7 @@ fn main() {
         exit(2);
     }
 
-    let s1 = Instant::now();
     println!("{:?}", ordered_bell_numbers(n_parsed.unwrap()));
-
-    println!("Time: {}ms", s1.elapsed().as_millis());
 }
 
 #[test]
@@ -55,8 +78,7 @@ fn test_10() {
             BigUint::from(4683usize),
             BigUint::from(47293usize),
             BigUint::from(545835usize),
-            BigUint::from(7087261usize),
-            BigUint::from(102247563usize)
+            BigUint::from(7087261usize)
         ],
         ordered_bell_numbers(10)
     );
